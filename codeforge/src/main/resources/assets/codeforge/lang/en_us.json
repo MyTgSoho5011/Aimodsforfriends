@@ -1,0 +1,12 @@
+{
+  "key.codeforge.open_console": "Open CodeForge console",
+  "key.codeforge.quick_slot_1": "CodeForge quick-run slot 1",
+  "key.codeforge.quick_slot_2": "CodeForge quick-run slot 2",
+  "key.codeforge.quick_slot_3": "CodeForge quick-run slot 3",
+  "key.codeforge.quick_slot_4": "CodeForge quick-run slot 4",
+  "key.codeforge.quick_slot_5": "CodeForge quick-run slot 5",
+  "codeforge.title": "CodeForge - live Java console",
+  "codeforge.run": "Compile & Run",
+  "codeforge.clear": "Clear output",
+  "codeforge.placeholder": "// write a run(MinecraftClient client) method body here\n// example:\nclient.player.sendMessage(net.minecraft.text.Text.literal(\"hi from injected code\"), false);"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "soho_api",
+  "version": "${version}",
+  "name": "Soho API",
+  "description": "Small shared library other Soho mods build on top of.",
+  "authors": ["maksa"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/soho_api/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.sohonet.sohoapi.SohoApiMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}

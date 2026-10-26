@@ -1,7 +1,20 @@
 pluginManagement {
     repositories {
-        maven { url = "https://maven.fabricmc.net/" }
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
         mavenCentral()
         gradlePluginPortal()
     }
 }
+
+rootProject.name = 'aimodsforfriends'
+
+// Minecraft mods (Fabric Loom)
+include 'melonoracle'
+include 'soho-api'
+include 'codeforge'
+
+// Plain Java library used by CodeForge plugins
+include 'codeforge-plugin-api'

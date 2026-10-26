@@ -1,0 +1,19 @@
+plugins {
+    id 'java-library'
+}
+
+version = project.plugin_api_version
+group = 'com.sohonet'
+
+base {
+    archivesName = 'codeforge-plugin-api'
+}
+
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': 'CodeForge Plugin API',
+            'Implementation-Version': project.version
+        )
+    }
+}

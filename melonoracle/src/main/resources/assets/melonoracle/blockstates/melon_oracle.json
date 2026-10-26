@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "melonoracle:block/melon_oracle" }
+  }
+}

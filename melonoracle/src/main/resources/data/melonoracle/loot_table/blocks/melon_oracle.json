@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "melonoracle:blocks/melon_oracle",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "melonoracle:melon_oracle" }
+      ]
+    }
+  ]
+}

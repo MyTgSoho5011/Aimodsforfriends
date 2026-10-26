@@ -1,0 +1,21 @@
+{
+  "criteria": {
+    "has_rotten_flesh": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [ { "items": [ "minecraft:rotten_flesh" ] } ]
+      }
+    }
+  },
+  "requirements": [ [ "has_rotten_flesh" ] ],
+  "display": {
+    "icon": { "item": "melonoracle:melon_oracle" },
+    "title": { "translate": "advancement.melonoracle.root.title" },
+    "description": { "translate": "advancement.melonoracle.root.description" },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "parent": "minecraft:recipes/root"
+}

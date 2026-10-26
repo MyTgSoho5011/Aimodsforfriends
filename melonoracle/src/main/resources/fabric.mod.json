@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "melonoracle",
+  "version": "${version}",
+  "name": "Melon Oracle",
+  "description": "A cursed melon statue and its kumis-born kin. Do not ask where the mare went.",
+  "authors": ["you"],
+  "contact": {},
+  "license": "CC0-1.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.melonoracle.MelonOracleMod"],
+    "client": ["com.melonoracle.MelonOracleClient"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}
