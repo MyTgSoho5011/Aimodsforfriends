@@ -74,7 +74,8 @@ jobs:
           set -e
           echo "### built jars"
           ls -l */build/libs/*.jar | grep -v -E 'sources|dev' || true
-          CF=codeforge/build/libs/codeforge-3.0.0.jar
+          CF_VER=$(grep -E '^codeforge_version=' gradle.properties | cut -d= -f2)
+          CF=codeforge/build/libs/codeforge-$CF_VER.jar
           echo "### $CF"
           jar tf "$CF" | grep -E '^(com/sohonet|assets|fabric.mod.json|META-INF/jars)' | head -n 40
           jar tf "$CF" | grep -q 'com/sohonet/codeforge/CodeForgeClient.class'
