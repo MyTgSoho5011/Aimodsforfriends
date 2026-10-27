@@ -9,25 +9,35 @@ Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — мно�
 | `soho-api` | Маленькая общая библиотека для «сохо»-модов (`SohoRegistry`) | `soho-api/build/libs/soho-api-1.0.0.jar` |
 | `codeforge-plugin-api` | API для плагинов CodeForge (обычная Java-библиотека, без Minecraft) | `codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar` |
 
-## Как получить готовый jar
+## Готовые файлы мода
 
-**Вариант 1 — забрать из CI (ничего ставить не нужно):**
-Actions → `Build mods` → последний зелёный запуск → блок **Artifacts** → `mods`.
-Там лежат все три jar-ника. Прямая ссылка на запуски:
-<https://github.com/MyTgSoho5011/Aimodsforfriends/actions/workflows/build.yml>
+Собранные jar-ники лежат в репозитории, разложенные по модам и версиям:
 
-**Вариант 2 — собрать локально:**
+```
+Releases/
+├── README.md
+├── codeforge/3.0.0/codeforge-3.0.0.jar            <- ставить ЭТОТ файл
+├── soho-api/1.0.0/soho-api-1.0.0.jar              (внутри codeforge уже есть)
+└── codeforge-plugin-api/1.0.0/…-1.0.0.jar         (нужен только для сборки плагинов)
+```
+
+Дополнительно тот же набор выложен как **GitHub Release** `v3.0.0`
+(<https://github.com/MyTgSoho5011/Aimodsforfriends/releases/tag/v3.0.0>).
+
+Установка: скопировать `codeforge-3.0.0.jar` в `.minecraft/mods`. Нужны Fabric Loader 0.18.4+
+и Fabric API для 1.21.11; `soho-api` и компилятор ECJ уже вложены внутрь jar-ника.
+
+**Пересобрать и переопубликовать** (без локального JDK):
+Actions → `Build mods` → *Run workflow* → `publish = true`. Либо сделать коммит с `[publish]`
+в сообщении — публикация запустится сама. Workflow пересоберёт мод, положит jar в
+`Releases/<мод>/<версия>/` и создаст/обновит GitHub Release.
+
+Локальная сборка по-прежнему работает:
 
 ```bash
 ./gradlew build            # или: gradle build
 ./gradlew build collectJars   # то же + сложить всё в build/dist
 ```
-
-Нужен JDK 21 и интернет (Minecraft, Yarn, Fabric API, ECJ тянутся при первой сборке;
-дальше работает кеш Gradle).
-
-Ставится в `.minecraft/mods` **один файл** `codeforge-3.0.0.jar` — `soho-api` и компилятор
-ECJ вложены внутрь. Нужны Fabric Loader и Fabric API.
 
 ## CodeForge: что внутри
 
