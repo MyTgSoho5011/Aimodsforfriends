@@ -56,27 +56,33 @@ jobs:
             */build/libs/*.jar
           if-no-files-found: warn
 
-      # Логи GitHub Actions скачиваются с хоста, который не всегда доступен
-      # агентам, поэтому на неудаче кладём лог прямо в ветку - его видно
-      # через обычный git fetch.
-      - name: Publish build log to branch
-        if: always()
+      # Логи Actions качаются с results-receiver.actions.githubusercontent.com,
+      # который недоступен части агентов, поэтому дублируем лог сборки
+      # аннотациями чек-рана - они читаются обычным GET /check-runs/{id}/annotations.
+      - name: Expose build log as check-run annotations
+        if: steps.build.outcome != 'success'
+        shell: bash
         run: |
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ -f ci/last-build.log ]; then
-            if [ "${{ steps.build.outcome }}" = "success" ]; then
-              echo "Build OK ($(date -u +%FT%TZ))" > ci/STATUS
-            else
-              echo "Build FAILED ($(date -u +%FT%TZ))" > ci/STATUS
-            fi
-            git add ci/last-build.log ci/STATUS
-            if ! git diff --cached --quiet; then
-              git commit -m "ci: build log (${{ steps.build.outcome }})"
-              git push origin HEAD:${{ github.ref_name }}
-            fi
-          fi
+          python3 - <<'PY'
+          import pathlib, urllib.parse
+          path = pathlib.Path('ci/last-build.log')
+          if not path.exists():
+              print('::error title=no-log::ci/last-build.log was not produced')
+              raise SystemExit(0)
+          lines = path.read_text(encoding='utf-8', errors='replace').splitlines()[-400:]
+          chunks, cur, size = [], [], 0
+          for line in lines:
+              cur.append(line)
+              size += len(line) + 1
+              if size > 6000:
+                  chunks.append('\n'.join(cur)); cur, size = [], 0
+          if cur:
+              chunks.append('\n'.join(cur))
+          total = len(chunks)
+          for i, chunk in enumerate(chunks[:10]):
+              escaped = chunk.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f"::error title=build log {i+1} of {min(total, 10)}::{escaped}")
+          PY
 
       - name: Fail the job if the build failed
         if: steps.build.outcome != 'success'
