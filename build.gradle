@@ -1,5 +1,5 @@
 // Корневой проект - агрегатор. Каждый мод собирается в своём подпроекте:
-//   melonoracle, codeforge, soho-api  - Fabric-моды (Loom)
+//   codeforge, soho-api               - Fabric-моды (Loom)
 //   codeforge-plugin-api             - обычная Java-библиотека
 plugins {
     id 'base'

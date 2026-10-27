@@ -1,6 +1,0 @@
-{
-  "variants": {
-    "half=lower": { "model": "melonoracle:block/kumis_statue_lower" },
-    "half=upper": { "model": "melonoracle:block/kumis_statue_upper" }
-  }
-}

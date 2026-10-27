@@ -8,7 +8,6 @@ Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — мно�
 | `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.0.0.jar` (внутри уже лежат `soho-api` и `ecj`) |
 | `soho-api` | Маленькая общая библиотека для «сохо»-модов (`SohoRegistry`) | `soho-api/build/libs/soho-api-1.0.0.jar` |
 | `codeforge-plugin-api` | API для плагинов CodeForge (обычная Java-библиотека, без Minecraft) | `codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar` |
-| `melonoracle` | «Melon Oracle» — проклятый арбуз-оракул и кумысовая статуя (восстановлен из `src.7z`) | `melonoracle/build/libs/melonoracle-3.0.0.jar` |
 
 ## Как собрать
 
@@ -37,7 +36,6 @@ gradle build
 
 * `codeforge-3.0.0.jar` — **один файл**, `soho-api` и компилятор ECJ вложены внутрь
   (`META-INF/jars`), отдельно их ставить не обязательно;
-* по желанию — `melonoracle-3.0.0.jar`;
 * нужен установленный **Fabric Loader** и **Fabric API**.
 
 ## CodeForge: что внутри
