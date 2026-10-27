@@ -3,8 +3,12 @@ name: Build mods
 on:
   push:
     branches: [main, 'arena/**']
+    paths-ignore: ['ci/**']
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -24,12 +28,26 @@ jobs:
           gradle-version: '9.8.2'
 
       - name: Build every module
-        run: gradle build --no-daemon --stacktrace
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p ci
+          {
+            echo "### gradle build ($(date -u +%FT%TZ))"
+            echo "### java: $(java -version 2>&1 | head -1)"
+            echo "### gradle: $(gradle --version 2>&1 | grep -E '^Gradle' )"
+          } > ci/last-build.log
+          gradle build --no-daemon --stacktrace --console=plain >> ci/last-build.log 2>&1
+          echo "BUILD_EXIT=$?" >> ci/last-build.log
+          tail -n 120 ci/last-build.log
 
       - name: Collect jars
-        run: gradle collectJars --no-daemon
+        if: steps.build.outcome == 'success'
+        run: gradle collectJars --no-daemon --console=plain
 
       - name: Upload mod jars
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: mods
@@ -37,3 +55,29 @@ jobs:
             build/dist/*.jar
             */build/libs/*.jar
           if-no-files-found: warn
+
+      # Логи GitHub Actions скачиваются с хоста, который не всегда доступен
+      # агентам, поэтому на неудаче кладём лог прямо в ветку - его видно
+      # через обычный git fetch.
+      - name: Publish build log to branch
+        if: always()
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f ci/last-build.log ]; then
+            if [ "${{ steps.build.outcome }}" = "success" ]; then
+              echo "Build OK ($(date -u +%FT%TZ))" > ci/STATUS
+            else
+              echo "Build FAILED ($(date -u +%FT%TZ))" > ci/STATUS
+            fi
+            git add ci/last-build.log ci/STATUS
+            if ! git diff --cached --quiet; then
+              git commit -m "ci: build log (${{ steps.build.outcome }})"
+              git push origin HEAD:${{ github.ref_name }}
+            fi
+          fi
+
+      - name: Fail the job if the build failed
+        if: steps.build.outcome != 'success'
+        run: exit 1
