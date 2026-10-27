@@ -68,6 +68,43 @@ jobs:
             */build/libs/*.jar
           if-no-files-found: warn
 
+      - name: Diagnose access widener sources
+        if: steps.build.outcome != 'success'
+        run: |
+          {
+          echo "### jars in the Gradle cache that declare an access widener"
+          python3 - <<'PY'
+          import json, pathlib, zipfile
+          roots = [pathlib.Path.home() / '.gradle' / 'caches' / 'modules-2']
+          found = 0
+          for root in roots:
+              for jar in root.rglob('*.jar'):
+                  try:
+                      if jar.stat().st_size > 60_000_000:
+                          continue
+                      with zipfile.ZipFile(jar) as z:
+                          names = set(z.namelist())
+                          if 'fabric.mod.json' not in names:
+                              continue
+                          meta = json.loads(z.read('fabric.mod.json'))
+                          aw = meta.get('accessWidener')
+                          if not aw:
+                              continue
+                          header = ''
+                          if aw in names:
+                              header = z.read(aw).decode('utf-8', 'replace').splitlines()[0]
+                          print(f"{jar.name} [{meta.get('id')}] -> {aw} :: {header}")
+                          found += 1
+                  except Exception:
+                      continue
+          print('total:', found)
+          PY
+          } > ci/diagnose.log 2>&1
+          cat ci/diagnose.log
+          # аннотации читаются агентом, обычный stdout шага - нет
+          printf '\n### diagnose\n' >> ci/summary.log
+          cat ci/diagnose.log >> ci/summary.log
+
       # Логи Actions качаются с results-receiver.actions.githubusercontent.com,
       # который недоступен части агентов, поэтому дублируем лог сборки
       # аннотациями чек-рана - они читаются обычным GET /check-runs/{id}/annotations.

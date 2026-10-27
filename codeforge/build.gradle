@@ -57,6 +57,15 @@ loom {
             sourceSet sourceSets.main
         }
     }
+
+    // Fabric API 1.21.11 объявляет свои access widener'ы в namespace
+    // 'official' (Fabric переезжает на Mojang-маппинги), а Loom 1.14 с
+    // Yarn-маппингами ждёт 'intermediary' и падает на setup:
+    //   IllegalArgumentException: Cannot remap access widener from
+    //   namespace 'official'. Expected: 'intermediary'
+    // Наш код не использует члены, которые расширяет Fabric API, поэтому
+    // транзитивные AW нам не нужны - отключаем.
+    enableTransitiveAccessWideners = false
 }
 
 processResources {
