@@ -82,46 +82,51 @@ jobs:
           jar tf "$CF" | grep -q 'META-INF/jars/.*ecj'
           jar tf "$CF" | grep -q 'META-INF/jars/.*soho-api'
 
-      # Публикация только по явному запросу: workflow_dispatch с publish=true
-      # или пуш тега вида v*.
+      # Публикация только по явному запросу: workflow_dispatch с publish=true,
+      # тег v* или коммит с [publish] в сообщении.
       - name: Publish jars into Releases/ and create a GitHub Release
         if: steps.build.outcome == 'success' && (inputs.publish || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[publish]'))
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Ветка, в которую кладём папку Releases/. У сборки по тегу ветки
-          # нет, поэтому берём явно заданную.
           if [[ "${GITHUB_REF}" == refs/heads/* ]]; then
             TARGET="${GITHUB_REF_NAME}"
           else
             TARGET="${{ inputs.publish_branch || 'arena/7c4d0f30-aimodsforfriends' }}"
           fi
-          echo "Releases/ -> ветка $TARGET"
-          MISE=codeforge/build/libs/codeforge-3.0.0.jar
-          SOHO=soho-api/build/libs/soho-api-1.0.0.jar
-          API=codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar
-          for f in "$MISE" "$SOHO" "$API"; do test -f "$f" || { echo "::error title=missing jar::$f"; exit 1; }; done
 
-          # 1) раскладываем по папкам: Releases/<мод>/<версия>/<файл>
-          mkdir -p Releases/codeforge/3.0.0 Releases/soho-api/1.0.0 Releases/codeforge-plugin-api/1.0.0
-          cp "$MISE" Releases/codeforge/3.0.0/
-          cp "$SOHO" Releases/soho-api/1.0.0/
-          cp "$API"  Releases/codeforge-plugin-api/1.0.0/
-          cat > Releases/README.md <<'MD'
-          # Releases
+          # версии и имена берём из gradle.properties, чтобы шаг не надо было
+          # править при каждом релизе
+          CF_VER=$(grep -E '^codeforge_version=' gradle.properties | cut -d= -f2)
+          SOHO_VER=$(grep -E '^soho_api_version=' gradle.properties | cut -d= -f2)
+          API_VER=$(grep -E '^plugin_api_version=' gradle.properties | cut -d= -f2)
+          MC_VER=$(grep -E '^minecraft_version=' gradle.properties | cut -d= -f2)
 
-          Готовые jar-ники, собранные CI (см. `.github/workflows/build.yml`).
-          Кладите файлы в `.minecraft/mods`.
+          CF=codeforge/build/libs/codeforge-$CF_VER.jar
+          SOHO=soho-api/build/libs/soho-api-$SOHO_VER.jar
+          API=codeforge-plugin-api/build/libs/codeforge-plugin-api-$API_VER.jar
+          for f in "$CF" "$SOHO" "$API"; do test -f "$f" || { echo "::error title=missing jar::$f"; exit 1; }; done
 
-          | Папка | Файл | Что это |
-          |---|---|---|
-          | `codeforge/3.0.0/` | `codeforge-3.0.0.jar` | Консоль CodeForge. Внутри уже `soho-api` и ECJ (jar-in-jar) — ставить один файл |
-          | `soho-api/1.0.0/` | `soho-api-1.0.0.jar` | Soho API отдельным файлом (необязательно, если стоит `codeforge`) |
-          | `codeforge-plugin-api/1.0.0/` | `codeforge-plugin-api-1.0.0.jar` | API для плагинов CodeForge (в игру не ставится) |
-
-          Собранo под Minecraft **1.21.11**, Fabric Loader 0.18.4, Fabric API 0.141.2+1.21.11, Java 21.
-          MD
+          # 1) раскладка по папкам: Releases/<мод>/<версия>/<файл>
+          mkdir -p "Releases/codeforge/$CF_VER" "Releases/soho-api/$SOHO_VER" "Releases/codeforge-plugin-api/$API_VER"
+          cp "$CF"   "Releases/codeforge/$CF_VER/"
+          cp "$SOHO" "Releases/soho-api/$SOHO_VER/"
+          cp "$API"  "Releases/codeforge-plugin-api/$API_VER/"
+          {
+            echo "# Releases"
+            echo
+            echo "Готовые jar-ники, собранные CI (см. \`.github/workflows/build.yml\`)."
+            echo "Кладите файлы в \`.minecraft/mods\`."
+            echo
+            echo "| Папка | Файл | Что это |"
+            echo "|---|---|---|"
+            echo "| \`codeforge/$CF_VER/\` | \`codeforge-$CF_VER.jar\` | Консоль CodeForge. Внутри уже \`soho-api\` и ECJ (jar-in-jar) — ставить один файл |"
+            echo "| \`soho-api/$SOHO_VER/\` | \`soho-api-$SOHO_VER.jar\` | Soho API отдельным файлом (необязательно, если стоит codeforge) |"
+            echo "| \`codeforge-plugin-api/$API_VER/\` | \`codeforge-plugin-api-$API_VER.jar\` | API для плагинов CodeForge (в игру не ставится) |"
+            echo
+            echo "Собрано под Minecraft **$MC_VER**, Fabric Loader 0.18.4+, Java 21."
+          } > Releases/README.md
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -129,20 +134,16 @@ jobs:
           if git diff --cached --quiet; then
             echo "Releases/ не изменилась"
           else
-            git commit -m "release: jar-ники CodeForge 3.0.0 / Soho API 1.0.0 / Plugin API 1.0.0"
+            git commit -m "release: jar-ники codeforge $CF_VER / soho-api $SOHO_VER / plugin-api $API_VER"
             git push origin "HEAD:$TARGET"
           fi
 
           # 2) GitHub Release с теми же файлами
-          TAG="v3.0.0"
-          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
-            git tag -f "$TAG"
-            git push -f origin "$TAG" || echo "::warning title=tag push failed::тег $TAG не запушен"
-          fi
+          TAG="v$CF_VER"
           gh release view "$TAG" >/dev/null 2>&1 || \
-            gh release create "$TAG" --title "CodeForge 3.0.0 (MC 1.21.11)" \
-              --notes "Сборка из CI. Внутри: CodeForge (консоль с компиляцией на лету), Soho API, CodeForge Plugin API. Ставить: codeforge-3.0.0.jar в .minecraft/mods (остальное уже внутри него)." || true
-          gh release upload "$TAG" "$MISE" "$SOHO" "$API" --clobber || true
+            gh release create "$TAG" --title "CodeForge $CF_VER (MC $MC_VER)" \
+              --notes "Сборка из CI. Ставить: codeforge-$CF_VER.jar в .minecraft/mods (soho-api и ECJ уже внутри)." || true
+          gh release upload "$TAG" "$CF" "$SOHO" "$API" --clobber || true
 
       - name: Upload mod jars
         if: steps.build.outcome == 'success'

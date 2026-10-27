@@ -683,7 +683,11 @@ public class CodeForgeScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
+        // ВАЖНО (1.21.9+): НЕ вызываем this.renderBackground(...) - движок уже
+        // применяет блюр фона один раз за кадр, а второй вызов бросает
+        // IllegalStateException: Can only blur once per frame (был краш при
+        // открытии консоли). Вместо блюра - обычная полупрозрачная заливка.
+        context.fill(0, 0, this.width, this.height, 0x88000000);
         super.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, this.getTitle(), 20, 8, 0xFFFFFF);
         if (this.errorLine > 0) {

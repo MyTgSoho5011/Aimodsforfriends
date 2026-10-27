@@ -5,7 +5,7 @@ Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — мно�
 
 | Модуль | Что это | Артефакт |
 |---|---|---|
-| `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.0.0.jar` (внутри `META-INF/jars` уже лежат `soho-api` и `ecj`) |
+| `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.0.1.jar` (внутри `META-INF/jars` уже лежат `soho-api` и `ecj`) |
 | `soho-api` | Маленькая общая библиотека для «сохо»-модов (`SohoRegistry`) | `soho-api/build/libs/soho-api-1.0.0.jar` |
 | `codeforge-plugin-api` | API для плагинов CodeForge (обычная Java-библиотека, без Minecraft) | `codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar` |
 
@@ -16,15 +16,15 @@ Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — мно�
 ```
 Releases/
 ├── README.md
-├── codeforge/3.0.0/codeforge-3.0.0.jar            <- ставить ЭТОТ файл
+├── codeforge/3.0.1/codeforge-3.0.1.jar            <- ставить ЭТОТ файл
 ├── soho-api/1.0.0/soho-api-1.0.0.jar              (внутри codeforge уже есть)
 └── codeforge-plugin-api/1.0.0/…-1.0.0.jar         (нужен только для сборки плагинов)
 ```
 
-Дополнительно тот же набор выложен как **GitHub Release** `v3.0.0`
-(<https://github.com/MyTgSoho5011/Aimodsforfriends/releases/tag/v3.0.0>).
+Дополнительно тот же набор выложен как **GitHub Release** `v3.0.1`
+(<https://github.com/MyTgSoho5011/Aimodsforfriends/releases/tag/v3.0.1>).
 
-Установка: скопировать `codeforge-3.0.0.jar` в `.minecraft/mods`. Нужны Fabric Loader 0.18.4+
+Установка: скопировать `codeforge-3.0.1.jar` в `.minecraft/mods`. Нужны Fabric Loader 0.18.4+
 и Fabric API для 1.21.11; `soho-api` и компилятор ECJ уже вложены внутрь jar-ника.
 
 **Пересобрать и переопубликовать** (без локального JDK):
@@ -94,6 +94,14 @@ Actions → `Build mods` → *Run workflow* → `publish = true`. Либо сд�
 5. **Mod Menu отключён:** его jar для 1.21.11 собран под Java 25 (class file 69), а игра и
    наш билд — Java 21, javac такой класс прочитать не может. Мод работает без него,
    пропадает только кнопка настроек в Mod Menu. Вернём, когда появится сборка под 21.
+
+## Исправлено в 3.0.1
+
+**Краш при открытии консоли** (`IllegalStateException: Can only blur once per frame`,
+`CodeForgeScreen.render` → `Screen.renderBackground` → `GuiRenderState.applyBlur`).
+Начиная с 1.21.9 экранный блюр применяется движком один раз за кадр, а второй вызов
+`renderBackground` бросает исключение. Убрали ручной `renderBackground` во всех экранах
+мода, вместо него — обычная полупрозрачная заливка (`DrawContext.fill`).
 
 ## Ограничения
 
