@@ -31,16 +31,28 @@ jobs:
         id: build
         continue-on-error: true
         run: |
-          set -o pipefail
           mkdir -p ci
           {
             echo "### gradle build ($(date -u +%FT%TZ))"
             echo "### java: $(java -version 2>&1 | head -1)"
-            echo "### gradle: $(gradle --version 2>&1 | grep -E '^Gradle' )"
+            echo "### gradle: $(gradle --version 2>&1 | grep -E '^Gradle')"
           } > ci/last-build.log
-          gradle build --no-daemon --stacktrace --console=plain >> ci/last-build.log 2>&1
-          echo "BUILD_EXIT=$?" >> ci/last-build.log
-          tail -n 120 ci/last-build.log
+          set +e
+          gradle build --no-daemon --console=plain >> ci/last-build.log 2>&1
+          CODE=$?
+          set -e
+          echo "BUILD_EXIT=$CODE" >> ci/last-build.log
+          # Короткая выжимка: то, что реально нужно прочитать человеку/агенту.
+          {
+            echo "### summary"
+            grep -nE '^FAILURE:|^\* What went wrong:|^> |error:|Could not (resolve|find|create|open|compile)|Plugin \[id|Unsupported class|requires|warning: \[options\]' ci/last-build.log | head -n 80 || true
+            echo "### context"
+            sed -n '/\* What went wrong:/,/\* Try:/p' ci/last-build.log | head -n 60 || true
+            echo "### build output tail"
+            grep -vE '^\s+at |^\s+\.\.\. [0-9]+ more' ci/last-build.log | tail -n 40 || true
+          } > ci/summary.log
+          cat ci/summary.log
+          exit $CODE
 
       - name: Collect jars
         if: steps.build.outcome == 'success'
@@ -65,9 +77,9 @@ jobs:
         run: |
           python3 - <<'PY'
           import pathlib, urllib.parse
-          path = pathlib.Path('ci/last-build.log')
+          path = pathlib.Path('ci/summary.log')
           if not path.exists():
-              print('::error title=no-log::ci/last-build.log was not produced')
+              print('::error title=no-log::ci/summary.log was not produced')
               raise SystemExit(0)
           lines = path.read_text(encoding='utf-8', errors='replace').splitlines()[-400:]
           chunks, cur, size = [], [], 0
