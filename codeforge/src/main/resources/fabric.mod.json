@@ -4,14 +4,17 @@
   "version": "${version}",
   "name": "CodeForge",
   "description": "In-game Java console: write code, compile it on the fly, run it. Built on Soho API (Soho501 = Absolutely Boss).",
-  "authors": ["maksa"],
+  "authors": [
+    "maksa"
+  ],
   "contact": {},
   "license": "MIT",
   "icon": "assets/codeforge/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["com.sohonet.codeforge.CodeForgeClient"],
-    "modmenu": ["com.sohonet.codeforge.gui.CodeForgeModMenu"]
+    "client": [
+      "com.sohonet.codeforge.CodeForgeClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.18.0",

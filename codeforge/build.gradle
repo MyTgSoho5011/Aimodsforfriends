@@ -20,14 +20,6 @@ sourceSets {
     }
 }
 
-repositories {
-    // Mod Menu (опциональная интеграция, compileOnly)
-    maven {
-        name = 'TerraformersMC'
-        url = 'https://maven.terraformersmc.com/releases/'
-    }
-}
-
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
@@ -46,10 +38,6 @@ dependencies {
     // (META-INF/jars), поэтому игроку не нужен JDK.
     implementation 'org.eclipse.jdt:ecj:3.38.0'
     include 'org.eclipse.jdt:ecj:3.38.0'
-
-    // Mod Menu - только для компиляции: если он установлен в игре,
-    // CodeForge добавит в него свою кнопку настроек.
-    modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 }
 
 loom {

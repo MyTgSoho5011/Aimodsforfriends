@@ -105,6 +105,33 @@ jobs:
           printf '\n### diagnose\n' >> ci/summary.log
           cat ci/diagnose.log >> ci/summary.log
 
+      - name: Dump Minecraft API signatures
+        if: steps.build.outcome != 'success'
+        run: |
+          {
+            echo "### javap on the mapped Minecraft jar"
+            CP=$(find .gradle/loom-cache "$HOME/.gradle/caches/fabric-loom" -name '*.jar' 2>/dev/null \
+                 | grep -v -E 'sources|javadoc' | tr '\n' ':')
+            echo "classpath entries: $(echo "$CP" | tr ':' '\n' | wc -l)"
+            for C in \
+              net.minecraft.client.gui.widget.EditBoxWidget \
+              'net.minecraft.client.option.KeyBinding$Category' \
+              net.minecraft.client.option.KeyBinding \
+              net.minecraft.client.gui.widget.MultilineTextWidget \
+              net.minecraft.client.gui.widget.ButtonWidget \
+              net.minecraft.client.gui.screen.Screen \
+              net.minecraft.client.gui.DrawContext ; do
+              echo "===== $C"
+              javap -classpath "$CP" -public "$C" 2>&1 \
+                | grep -vE '^Compiled from|^\}|^\{' \
+                | grep -E 'class |interface |public |protected ' \
+                | head -n 60
+            done
+          } > ci/api.log 2>&1
+          cat ci/api.log
+          printf '\n### api\n' >> ci/summary.log
+          cat ci/api.log >> ci/summary.log
+
       # Логи Actions качаются с results-receiver.actions.githubusercontent.com,
       # который недоступен части агентов, поэтому дублируем лог сборки
       # аннотациями чек-рана - они читаются обычным GET /check-runs/{id}/annotations.
