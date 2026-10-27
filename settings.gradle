@@ -7,6 +7,12 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+
+    // Версия плагина объявлена один раз здесь, подпроекты пишут просто
+    // `id 'fabric-loom'` (без версии). Меняя MC/Loom, правь это место.
+    plugins {
+        id 'fabric-loom' version '1.14-SNAPSHOT'
+    }
 }
 
 rootProject.name = 'aimodsforfriends'
