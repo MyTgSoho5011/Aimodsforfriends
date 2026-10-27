@@ -3,6 +3,7 @@ name: Build mods
 on:
   push:
     branches: [main, 'arena/**']
+    tags: ['v*']
     paths-ignore: ['ci/**']
   pull_request:
   workflow_dispatch:
@@ -11,6 +12,10 @@ on:
         description: 'Выложить собранные jar-ники в папку Releases/ и в GitHub Release'
         type: boolean
         default: false
+      publish_branch:
+        description: 'Ветка для папки Releases/ (при сборке по тегу)'
+        type: string
+        default: 'arena/7c4d0f30-aimodsforfriends'
 
 permissions:
   contents: write
@@ -80,11 +85,19 @@ jobs:
       # Публикация только по явному запросу: workflow_dispatch с publish=true
       # или пуш тега вида v*.
       - name: Publish jars into Releases/ and create a GitHub Release
-        if: steps.build.outcome == 'success' && (inputs.publish || startsWith(github.ref, 'refs/tags/v'))
+        if: steps.build.outcome == 'success' && (inputs.publish || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[publish]'))
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # Ветка, в которую кладём папку Releases/. У сборки по тегу ветки
+          # нет, поэтому берём явно заданную.
+          if [[ "${GITHUB_REF}" == refs/heads/* ]]; then
+            TARGET="${GITHUB_REF_NAME}"
+          else
+            TARGET="${{ inputs.publish_branch || 'arena/7c4d0f30-aimodsforfriends' }}"
+          fi
+          echo "Releases/ -> ветка $TARGET"
           MISE=codeforge/build/libs/codeforge-3.0.0.jar
           SOHO=soho-api/build/libs/soho-api-1.0.0.jar
           API=codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar
@@ -117,7 +130,7 @@ jobs:
             echo "Releases/ не изменилась"
           else
             git commit -m "release: jar-ники CodeForge 3.0.0 / Soho API 1.0.0 / Plugin API 1.0.0"
-            git push origin "HEAD:${{ github.ref_name }}"
+            git push origin "HEAD:$TARGET"
           fi
 
           # 2) GitHub Release с теми же файлами
