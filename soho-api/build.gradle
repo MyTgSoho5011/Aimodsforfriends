@@ -1,5 +1,5 @@
 plugins {
-    id 'net.fabricmc.fabric-loom-remap'
+    id 'java-library'
 }
 
 version = project.soho_api_version
@@ -9,18 +9,21 @@ base {
     archivesName = 'soho-api'
 }
 
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    mavenCentral()
 }
 
-loom {
-    mods {
-        soho_api {
-            sourceSet sourceSets.main
-        }
-    }
+dependencies {
+    // Soho API не трогает классы Minecraft - ему нужен только Fabric Loader
+    // (ModInitializer) и slf4j. Поэтому это обычная java-library, а не
+    // Loom-проект: так CodeForge зависит от неё, не читая mod-метаданные
+    // чужого проекта на этапе конфигурации.
+    compileOnly "net.fabricmc:fabric-loader:${project.loader_version}"
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
 }
 
 processResources {
@@ -28,5 +31,14 @@ processResources {
 
     filesMatching('fabric.mod.json') {
         expand 'version': project.version
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': 'Soho API',
+            'Implementation-Version': project.version
+        )
     }
 }

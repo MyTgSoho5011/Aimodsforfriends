@@ -34,11 +34,12 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Soho API - собственный подпроект. Jar-in-jar: если soho-api уже
-    // установлен отдельным файлом, Fabric использует его, иначе достанет
-    // вложенную копию из META-INF/jars.
-    modImplementation project(path: ':soho-api', configuration: 'namedElements')
-    include project(path: ':soho-api', configuration: 'namedElements')
+    // Soho API - собственный подпроект (обычная java-library, классов
+    // Minecraft не трогает). Jar-in-jar: если soho-api уже установлен
+    // отдельным файлом, Fabric использует его, иначе достанет вложенную
+    // копию из META-INF/jars.
+    implementation project(':soho-api')
+    include project(':soho-api')
 
     // ECJ (Eclipse Compiler for Java) - чистая Java-библиотека, которая
     // компилирует скрипты прямо в рантайме. Кладём её ВНУТРЬ jar-ника
