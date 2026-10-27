@@ -9,9 +9,14 @@ pluginManagement {
     }
 
     // Версия плагина объявлена один раз здесь, подпроекты пишут просто
-    // `id 'fabric-loom'` (без версии). Меняя MC/Loom, правь это место.
+    // `id 'net.fabricmc.fabric-loom-remap'` (без версии).
+    //
+    // В Loom 1.14+ id-шники разделились:
+    //   net.fabricmc.fabric-loom        - необфусцированные версии (MC 26.1+)
+    //   net.fabricmc.fabric-loom-remap  - обфусцированные версии (1.21.11 и старше)
+    //   fabric-loom                     - legacy, тянет не тот вариант для 1.21.11
     plugins {
-        id 'fabric-loom' version '1.14-SNAPSHOT'
+        id 'net.fabricmc.fabric-loom-remap' version '1.14-SNAPSHOT'
     }
 }
 
