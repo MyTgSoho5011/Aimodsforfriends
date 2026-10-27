@@ -1,50 +1,43 @@
 # Aimodsforfriends
 
 Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — многомодульный Gradle-билд,
-каждый мод собирается в свой jar.
+каждый мод собирается в свой jar. **Сборка проверена CI: `.github/workflows/build.yml` зелёный.**
 
 | Модуль | Что это | Артефакт |
 |---|---|---|
-| `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.0.0.jar` (внутри уже лежат `soho-api` и `ecj`) |
+| `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.0.0.jar` (внутри `META-INF/jars` уже лежат `soho-api` и `ecj`) |
 | `soho-api` | Маленькая общая библиотека для «сохо»-модов (`SohoRegistry`) | `soho-api/build/libs/soho-api-1.0.0.jar` |
 | `codeforge-plugin-api` | API для плагинов CodeForge (обычная Java-библиотека, без Minecraft) | `codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar` |
 
-## Как собрать
+## Как получить готовый jar
 
-Нужен **JDK 21** (Gradle сам скачает нужную тулчейн-версию, если её нет) и интернет
-(артефакты Minecraft/Fabric/Loom тянутся с `maven.fabricmc.net` и Mojang).
+**Вариант 1 — забрать из CI (ничего ставить не нужно):**
+Actions → `Build mods` → последний зелёный запуск → блок **Artifacts** → `mods`.
+Там лежат все три jar-ника. Прямая ссылка на запуски:
+<https://github.com/MyTgSoho5011/Aimodsforfriends/actions/workflows/build.yml>
 
-```bash
-# всё сразу
-./gradlew build
-
-# только CodeForge (быстрее, если остальное не нужно)
-./gradlew :codeforge:build
-
-# разложить готовые jar-ники в build/dist
-./gradlew build collectJars
-```
-
-Раньше в репозитории не было `gradle/wrapper/*`, поэтому `./gradlew` не запускался —
-теперь wrapper добавлен (Gradle 9.8.2). Если предпочитаешь системный Gradle:
+**Вариант 2 — собрать локально:**
 
 ```bash
-gradle build
+./gradlew build            # или: gradle build
+./gradlew build collectJars   # то же + сложить всё в build/dist
 ```
 
-Готовые моды кладутся в `.minecraft/mods`:
+Нужен JDK 21 и интернет (Minecraft, Yarn, Fabric API, ECJ тянутся при первой сборке;
+дальше работает кеш Gradle).
 
-* `codeforge-3.0.0.jar` — **один файл**, `soho-api` и компилятор ECJ вложены внутрь
-  (`META-INF/jars`), отдельно их ставить не обязательно;
-* нужен установленный **Fabric Loader** и **Fabric API**.
+Ставится в `.minecraft/mods` **один файл** `codeforge-3.0.0.jar` — `soho-api` и компилятор
+ECJ вложены внутрь. Нужны Fabric Loader и Fabric API.
 
 ## CodeForge: что внутри
 
-Открыть консоль — клавиша `]` (или кнопка в Mod Menu, если он установлен).
+Открыть консоль — клавиша `]`.
 
 Вкладки: `Editor` (код + Compile & Run / Save as... / Copy / Paste / Export .java),
 `Tutorial`, `My Scripts` (с версиями скриптов), `History`, `Mods`, `Textures`
 (пиксель-арт редактор 32×32, сохраняет PNG в `config/codeforge/textures/`), `Plugins`.
+Горячие клавиши в редакторе: `Ctrl+Enter` — запуск, `Ctrl+S` — сохранить.
+Быстрый запуск сохранённых скриптов — `F7`…`F10`, `F12` (переназначаются в настройках управления).
 
 Как это работает: тело метода → ECJ (Eclipse Compiler for Java, **чистая Java-библиотека**,
 никакого внешнего `javac`/JDK не нужно) → класс грузится своим `ClassLoader` →
@@ -53,47 +46,58 @@ gradle build
 если что-то нашлось — показывается диалог подтверждения.
 
 Файлы в `config/codeforge/`: `scripts.json` (сохранённые скрипты + история версий),
-`history.json` (журнал запусков), `keybinds.json` (привязка скриптов к F7–F10/F12),
+`history.json` (журнал запусков), `keybinds.json` (привязка скриптов к клавишам),
 `plugins/` (плагины `*.jar` через `ServiceLoader`), `textures/` (PNG из редактора).
 
-## Что пришлось восстановить
+## Что было восстановлено из архива
 
-`codeforge-workspace.zip` — это 7-Zip-архив (LZMA), обычный `unzip`/проводник Windows
-его не открывает; распакован через Python (`py7zr`). В архиве лежали только 6 java-файлов,
-остальные каталоги были пустыми, но код ссылался на ~14 отсутствующих классов. Они
-написаны заново в совместимом стиле (те же пакеты/имена/сигнатуры, что ожидает
-`CodeForgeClient` и `CodeForgeScreen`):
+`codeforge-workspace.zip` — 7-Zip-архив (LZMA), обычный `unzip` его не открывает; распакован
+через Python (`py7zr`). Внутри лежали только 6 java-файлов, остальные каталоги были пустыми,
+но код ссылался на ~14 отсутствующих классов. Они написаны заново в совместимом стиле
+(те же пакеты/имена/сигнатуры, что ожидают `CodeForgeClient` и `CodeForgeScreen`):
 
-* `scripts/` — `ScriptLibrary` (папки, скрипты, версии), `RunHistory`, `ScriptContext`;
+* `scripts/` — `ScriptLibrary` (папки, скрипты, версии), `RunHistory`, `ScriptContext`, `ScriptExporter`;
 * `plugin/` — `PluginRegistry`, `PluginLoader` (плагины из `config/codeforge/plugins`);
-* `keybinds/` — `KeyBindingManager` (5 слотов быстрого запуска, F7–F10/F12);
+* `keybinds/` — `KeyBindingManager` (5 слотов быстрого запуска);
 * `safety/` — `DangerousCallScanner`;
 * `mods/` — `ModListHelper`;
-* `gui/` — `HighlightedCodeArea`, `ConfirmDialogScreen`, `TextInputPromptScreen`,
-  `ScriptDetailScreen`, `TextureEditorScreen`.
+* `gui/` — `ConfirmDialogScreen`, `TextInputPromptScreen`, `ScriptDetailScreen`, `TextureEditorScreen`.
 
 Исходники разделены на два source-каталога: `codeforge/src/main/java` (GUI и точка входа)
 и `codeforge/src/core/java` (всё остальное).
 
-## Ограничения / что стоит знать
+## Что пришлось поправить под 1.21.11 (реальные ошибки компиляции)
 
-1. **Jar-ники не собраны в этой сессии.** Песочница, где правился проект, имеет доступ
-   только к GitHub/PyPI/npm — `maven.fabricmc.net` и `maven.mojang.com` недоступны, поэтому
-   Gradle не может скачать Minecraft/Loom. Проверено: синтаксис всех 26 `.java`-файлов
-   (парсер Java), конфигурация модулей, отсутствие «висячих» ссылок между классами.
-   Первый реальный `./gradlew build` нужно сделать у себя (или в CI — см. workflow ниже).
-2. **Компиляция скриптов в рантайме рассчитана на dev-окружение** (`runClient`/IDE), где
-   Minecraft использует yarn-имена: в релизной игре классы называются по intermediary,
-   и скрипты с `MinecraftClient.player` там не скомпилируются. Это ограничение подхода
-   «скомпилировать на лету внутри мода», а не конкретной реализации.
-3. Редактор — однострочный `EditBox` (переносы строк в тексте сохраняются и компилируются,
-   но подсветки/нумерации строк нет). Полноценная отрисовка кода ломается от версии к версии.
-4. `Mod Menu` подключён как `compileOnly`: без него мод работает, просто нет кнопки настроек.
-5. Версия Loom в корне (`1.14-SNAPSHOT`) взята из исходного `build.gradle` архива. Если
-   Gradle ругается на `modImplementation`, замени его на `implementation` — в новых Loom
-   API это синоним, а сам `fabric-loom` мог переехать на id `net.fabricmc.fabric-loom`.
+1. **Loom 1.14 разделил id плагинов.** `fabric-loom` — legacy; для обфусцированных версий
+   (1.21.11 и старше) нужен `net.fabricmc.fabric-loom-remap`. Версия объявлена один раз в
+   `settings.gradle` (`pluginManagement.plugins`).
+2. **Access widener'ы Fabric API больше не совместимы с Yarn-сборкой:** часть модулей
+   объявляет `classTweaker v1 official`, а Loom с Yarn ждёт `intermediary`. Наш код не
+   использует расширяемые члены → в `codeforge/build.gradle` стоит
+   `enableTransitiveAccessWideners = false`.
+3. **`soho-api` стал обычной `java-library`** (он не трогает классы Minecraft). Иначе Loom
+   на этапе конфигурации пытался прочитать dev-jar подпроекта, которого ещё нет на чистом клоне.
+4. **API 1.21.11:** `KeyBinding` принимает `KeyBinding.Category.MISC` вместо строки;
+   `EditBox` стал моделью текста, виджет — `EditBoxWidget` (создаётся билдером, наследовать
+   нельзя — конструктор закрыт); ввод теперь приходит объектами `KeyInput`/`Click`
+   (`keyPressed(KeyInput)`, `mouseClicked(Click, boolean)`), а не тремя `int`/`double`.
+5. **Mod Menu отключён:** его jar для 1.21.11 собран под Java 25 (class file 69), а игра и
+   наш билд — Java 21, javac такой класс прочитать не может. Мод работает без него,
+   пропадает только кнопка настроек в Mod Menu. Вернём, когда появится сборка под 21.
+
+## Ограничения
+
+* **Компиляция скриптов в рантайме рассчитана на dev-окружение** (`runClient`/IDE), где
+  Minecraft использует yarn-имена: в релизной игре классы называются по intermediary,
+  и скрипты с `MinecraftClient.player` там не скомпилируются. Это ограничение подхода
+  «скомпилировать на лету внутри мода», а не конкретной реализации.
+* Редактор — многострочный `EditBoxWidget`: переносы строк и ввод работают, подсветки
+  синтаксиса нет (только отметка «compile error near line N»).
+* Тесты/`runClient` в CI не запускаются — только сборка.
 
 ## CI
 
-`.github/workflows/build.yml` собирает все моды на push/PR и складывает jar-ники в артефакты
-GitHub Actions — удобно, если локально нет JDK/Gradle.
+`.github/workflows/build.yml`: JDK 21 + Gradle 9.8.2, собирает все модули, проверяет
+раскладку jar-ника (классы, `fabric.mod.json`, вложенные `soho-api`/`ecj`), складывает
+jar-ники в артефакт `mods`. На падении печатает выжимку ошибок и `javap`-дамп API
+Minecraft аннотациями чек-рана.
