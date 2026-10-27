@@ -1,10 +1,11 @@
 package com.sohonet.codeforge.gui;
 
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.widget.EditBoxWidget;
 import net.minecraft.text.Text;
 
 import javax.imageio.ImageIO;
@@ -19,6 +20,8 @@ import java.util.Arrays;
  * ЛКМ - рисовать выбранным цветом, ПКМ - стереть пиксель.
  * "Save PNG" кладёт файл в config/codeforge/textures/&lt;имя&gt;.png,
  * откуда его можно забрать в ресурспак (см. Tutorial Ch6).
+ *
+ * Ввод мыши в 1.21.11 приходит объектом Click (x(), y(), button()).
  */
 public class TextureEditorScreen extends Screen {
 
@@ -35,7 +38,7 @@ public class TextureEditorScreen extends Screen {
     private int cellSize;
     private int gridLeft;
     private int gridTop;
-    private TextFieldWidget nameField;
+    private EditBoxWidget nameField;
     private String status = "";
 
     public TextureEditorScreen(Screen parent) {
@@ -60,9 +63,11 @@ public class TextureEditorScreen extends Screen {
         }
 
         int controlsY = paletteY + 26;
-        this.nameField = new TextFieldWidget(this.textRenderer, margin, controlsY, 160, 20, Text.literal("file name"));
-        this.nameField.setMaxLength(64);
-        this.nameField.setText("my_texture");
+        this.nameField = EditBoxWidget.builder()
+            .x(margin)
+            .y(controlsY)
+            .build(this.textRenderer, 160, 20, Text.literal("my_texture"));
+        this.nameField.setMaxLines(1);
         this.addDrawableChild(this.nameField);
 
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Save PNG"), b -> savePng())
@@ -116,21 +121,23 @@ public class TextureEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if ((button == 0 || button == 1) && insideGrid(mouseX, mouseY)) {
-            paint(mouseX, mouseY, button);
+    public boolean mouseClicked(Click click, boolean doubled) {
+        int button = click.button();
+        if ((button == 0 || button == 1) && insideGrid(click.x(), click.y())) {
+            paint(click.x(), click.y(), button);
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if ((button == 0 || button == 1) && insideGrid(mouseX, mouseY)) {
-            paint(mouseX, mouseY, button);
+    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+        int button = click.button();
+        if ((button == 0 || button == 1) && insideGrid(click.x(), click.y())) {
+            paint(click.x(), click.y(), button);
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return super.mouseDragged(click, offsetX, offsetY);
     }
 
     @Override
@@ -151,7 +158,6 @@ public class TextureEditorScreen extends Screen {
             }
         }
 
-        // Палитра: цветные квадратики над кнопками.
         int paletteY = gridTop + SIZE * cellSize + 8;
         for (int i = 0; i < PALETTE.length; i++) {
             int x = 20 + i * 24;

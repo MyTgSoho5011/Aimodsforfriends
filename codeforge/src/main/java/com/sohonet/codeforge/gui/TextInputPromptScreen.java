@@ -3,7 +3,8 @@ package com.sohonet.codeforge.gui;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.widget.EditBoxWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 
 import java.util.function.Consumer;
@@ -17,7 +18,7 @@ public class TextInputPromptScreen extends Screen {
     private final Screen parent;
     private final String initialValue;
     private final Consumer<String> callback;
-    private TextFieldWidget field;
+    private EditBoxWidget field;
 
     public TextInputPromptScreen(Screen parent, String title, String initialValue, Consumer<String> callback) {
         super(Text.literal(title));
@@ -31,10 +32,12 @@ public class TextInputPromptScreen extends Screen {
         int centerX = this.width / 2;
         int fieldWidth = Math.min(320, this.width - 40);
 
-        this.field = new TextFieldWidget(this.textRenderer, centerX - fieldWidth / 2, this.height / 2 - 20,
-            fieldWidth, 20, Text.literal("value"));
+        this.field = EditBoxWidget.builder()
+            .x(centerX - fieldWidth / 2)
+            .y(this.height / 2 - 20)
+            .build(this.textRenderer, fieldWidth, 20, Text.literal(this.initialValue));
         this.field.setMaxLength(512);
-        this.field.setText(this.initialValue);
+        this.field.setMaxLines(1);
         this.addDrawableChild(this.field);
         this.setInitialFocus(this.field);
 
@@ -59,16 +62,16 @@ public class TextInputPromptScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 257 || keyCode == 335) { // Enter / Numpad Enter
+    public boolean keyPressed(KeyInput input) {
+        if (input.isEnter()) {
             submit();
             return true;
         }
-        if (keyCode == 256) { // Escape
+        if (input.isEscape()) {
             cancel();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
 
     @Override

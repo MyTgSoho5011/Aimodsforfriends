@@ -10,7 +10,10 @@ import com.sohonet.codeforge.scripts.ScriptLibrary;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.EditBoxWidget;
 import net.minecraft.client.gui.widget.MultilineTextWidget;
+import net.minecraft.client.input.KeyInput;
+import org.lwjgl.glfw.GLFW;
 import net.minecraft.text.Text;
 
 import java.nio.file.Path;
@@ -76,7 +79,9 @@ public class CodeForgeScreen extends Screen {
     private String currentFolder = "";
 
     // --- виджеты вкладки EDITOR ---
-    private HighlightedCodeArea codeArea;
+    private EditBoxWidget codeArea;
+    /** -1 = ошибок компиляции нет; иначе номер строки, подсвечиваемой над редактором. */
+    private int errorLine = -1;
     private MultilineTextWidget outputWidget;
     private ButtonWidget runButton;
     private String lastOutput = "";
@@ -137,11 +142,19 @@ public class CodeForgeScreen extends Screen {
         int fieldWidth = this.width - margin * 2;
         int fieldHeight = Math.max(80, (this.height - top - 130));
 
-        this.codeArea = new HighlightedCodeArea(this.textRenderer, margin, top, fieldWidth, fieldHeight, Text.translatable("codeforge.placeholder"));
+        // В 1.21.9+ EditBox - это модель многострочного текста, а виджет
+        // называется EditBoxWidget и создаётся билдером.
+        // Сочетания клавиш (Ctrl+Enter - запуск, Ctrl+S - сохранить)
+        // обрабатывает сам экран, см. keyPressed ниже.
+        this.codeArea = EditBoxWidget.builder()
+            .x(margin)
+            .y(top)
+            .placeholder(Text.translatable("codeforge.placeholder"))
+            .build(this.textRenderer, fieldWidth, fieldHeight, Text.literal(""));
+        this.codeArea.setMaxLength(1_000_000);
+        this.codeArea.setMaxLines(64);
         this.codeArea.setText(editorText != null ? editorText : Text.translatable("codeforge.placeholder").getString());
-        this.codeArea.setOnRunRequested(this::compileAndRun);
-        this.codeArea.setOnSaveRequested(this::openSavePrompt);
-        this.codeArea.setOnLargePaste(this::onLargePasteDetected);
+        this.codeArea.setChangeListener(text -> this.editorText = text);
         this.addDrawableChild(this.codeArea);
 
         int buttonY = top + fieldHeight + 6;
@@ -187,7 +200,7 @@ public class CodeForgeScreen extends Screen {
         }
         lastOutput = "Compiling...";
         refreshOutput();
-        codeArea.setErrorLine(-1);
+        this.errorLine = -1;
 
         String source = this.codeArea.getText();
         editorText = source;
@@ -217,7 +230,7 @@ public class CodeForgeScreen extends Screen {
                         if (m.find()) {
                             try {
                                 int line = Integer.parseInt(m.group(1));
-                                codeArea.setErrorLine(line);
+                                this.errorLine = line;
                             } catch (NumberFormatException ignored) {
                             }
                         }
@@ -241,7 +254,7 @@ public class CodeForgeScreen extends Screen {
         }));
     }
 
-    private void onLargePasteDetected(String pastedFullText) {
+    private void onLargePasteDetected() {
         if (this.client == null) {
             return;
         }
@@ -298,7 +311,10 @@ public class CodeForgeScreen extends Screen {
         }
         String clipboard = this.client.keyboard.getClipboard();
         if (clipboard != null && !clipboard.isEmpty()) {
-            this.codeArea.pasteText(clipboard);
+            this.codeArea.setText(this.codeArea.getText() + clipboard);
+            if (clipboard.length() > 400) {
+                onLargePasteDetected();
+            }
         }
     }
 
@@ -647,11 +663,33 @@ public class CodeForgeScreen extends Screen {
         this.init();
     }
 
+    /**
+     * Горячие клавиши редактора. В 1.21.11 ввод приходит объектом KeyInput
+     * (key(), scancode(), modifiers()), а не тремя int'ами.
+     */
+    @Override
+    public boolean keyPressed(KeyInput input) {
+        boolean ctrlOrCmd = input.hasCtrlOrCmd();
+        if (ctrlOrCmd && (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER)) {
+            compileAndRun();
+            return true;
+        }
+        if (ctrlOrCmd && input.key() == GLFW.GLFW_KEY_S) {
+            openSavePrompt();
+            return true;
+        }
+        return super.keyPressed(input);
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, this.getTitle(), 20, 8, 0xFFFFFF);
+        if (this.errorLine > 0) {
+            context.drawTextWithShadow(this.textRenderer,
+                Text.literal("compile error near line " + this.errorLine), 20, this.height - 12, 0xFF5555);
+        }
     }
 
     @Override
