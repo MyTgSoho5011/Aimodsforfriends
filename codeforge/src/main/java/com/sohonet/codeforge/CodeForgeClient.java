@@ -58,7 +58,7 @@ public class CodeForgeClient implements ClientModInitializer {
             "key.codeforge.open_console",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_RIGHT_BRACKET,
-            "key.categories.misc"
+            KeyBinding.Category.MISC
         ));
 
         KeyBindingManager.registerKeyBindings();

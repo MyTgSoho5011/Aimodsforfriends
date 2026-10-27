@@ -109,24 +109,29 @@ jobs:
         if: steps.build.outcome != 'success'
         run: |
           {
-            echo "### javap on the mapped Minecraft jar"
             CP=$(find .gradle/loom-cache "$HOME/.gradle/caches/fabric-loom" -name '*.jar' 2>/dev/null \
                  | grep -v -E 'sources|javadoc' | tr '\n' ':')
-            echo "classpath entries: $(echo "$CP" | tr ':' '\n' | wc -l)"
-            for C in \
-              net.minecraft.client.gui.widget.EditBoxWidget \
-              'net.minecraft.client.option.KeyBinding$Category' \
-              net.minecraft.client.option.KeyBinding \
-              net.minecraft.client.gui.widget.MultilineTextWidget \
-              net.minecraft.client.gui.widget.ButtonWidget \
-              net.minecraft.client.gui.screen.Screen \
-              net.minecraft.client.gui.DrawContext ; do
-              echo "===== $C"
-              javap -classpath "$CP" -public "$C" 2>&1 \
-                | grep -vE '^Compiled from|^\}|^\{' \
-                | grep -E 'class |interface |public |protected ' \
-                | head -n 60
-            done
+            dump() {
+              echo "===== $1"
+              javap -classpath "$CP" -public "$1" 2>&1 | grep -vE '^Compiled from|^\}|^\{' | head -n "${2:-45}"
+            }
+            dump net.minecraft.client.gui.widget.EditBoxWidget 30
+            dump 'net.minecraft.client.gui.widget.EditBoxWidget$Builder' 30
+            dump net.minecraft.client.input.KeyInput 25
+            dump net.minecraft.client.input.CharInput 25
+            dump net.minecraft.client.gui.Click 25
+            echo "===== Screen (input/render only)"
+            javap -classpath "$CP" -public net.minecraft.client.gui.screen.Screen 2>&1 \
+              | grep -E 'keyPressed|mouseClicked|mouseDragged|mouseScrolled|charTyped|render\(|init\(|close\(|shouldPause|getTitle|addDrawableChild|clearChildren|setInitialFocus|width|height' | head -n 30
+            echo "===== Element/ParentElement"
+            javap -classpath "$CP" -public net.minecraft.client.gui.Element net.minecraft.client.gui.ParentElement 2>&1 \
+              | grep -E 'keyPressed|mouseClicked|mouseDragged|mouseScrolled|charTyped' | head -n 20
+            dump net.minecraft.client.gui.widget.MultilineTextWidget 20
+            dump net.minecraft.client.gui.widget.ButtonWidget 25
+            dump 'net.minecraft.client.gui.widget.ButtonWidget$Builder' 20
+            dump net.minecraft.client.gui.widget.TextFieldWidget 25
+            echo "===== KeyBinding ctors"
+            javap -classpath "$CP" -public net.minecraft.client.option.KeyBinding 2>&1 | grep -E 'KeyBinding\(' | head -n 6
           } > ci/api.log 2>&1
           cat ci/api.log
           printf '\n### api\n' >> ci/summary.log

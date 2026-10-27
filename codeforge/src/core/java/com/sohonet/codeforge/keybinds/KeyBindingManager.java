@@ -57,7 +57,7 @@ public final class KeyBindingManager {
                 "key.codeforge.quick_slot_" + (slot + 1),
                 InputUtil.Type.KEYSYM,
                 DEFAULT_KEYS[slot],
-                "key.categories.misc"
+                KeyBinding.Category.MISC
             ));
         }
         load();
