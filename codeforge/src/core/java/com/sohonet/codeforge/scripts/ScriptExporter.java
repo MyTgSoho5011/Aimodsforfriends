@@ -45,15 +45,16 @@ public final class ScriptExporter {
 
     private static String wrap(String className, String body) {
         StringBuilder sb = new StringBuilder();
-        sb.append("// Exported by CodeForge. Paste the body into your own run(MinecraftClient) method\n");
-        sb.append("// if you want to keep it inside a real mod.\n\n");
+        sb.append("// Exported by CodeForge. Скрипт использует стабильный API мода\n");
+        sb.append("// (com.sohonet.codeforge.api), поэтому компилируется и в dev, и в релизной игре.\n\n");
         sb.append("package com.sohonet.codeforge.generated;\n\n");
-        sb.append("import net.minecraft.client.MinecraftClient;\n");
+        sb.append("import com.sohonet.codeforge.api.*;\n");
         sb.append("import com.sohonet.codeforge.sandbox.InjectedScript;\n");
-        sb.append("import com.sohonet.codeforge.scripts.ScriptContext;\n\n");
+        sb.append("import java.util.*;\n");
+        sb.append("import static com.sohonet.codeforge.api.Client.*;\n\n");
         sb.append("public class ").append(className).append(" implements InjectedScript {\n");
         sb.append("    @Override\n");
-        sb.append("    public void run(MinecraftClient client) throws Exception {\n");
+        sb.append("    public void run() throws Exception {\n");
         for (String line : body.split("\n", -1)) {
             sb.append("        ").append(line).append('\n');
         }

@@ -84,65 +84,67 @@ public final class ScriptLibrary {
     }
 
     static {
+        // Примеры написаны через стабильный API (Client/Player/World), поэтому
+        // работают и в dev-окружении, и в релизной игре.
         example("01 basics", "Hello chat", """
-            ScriptContext.say("Hello from CodeForge!");
+            say("Hello from CodeForge!");
             """);
         example("01 basics", "Who am I", """
-            ScriptContext.say("I am " + client.player.getGameProfile().getName());
-            ScriptContext.say("at " + client.player.getBlockPos().toShortString());
+            say("I am " + player().name());
+            say("at " + player().blockPos() + " in " + player().dimension());
             """);
         example("01 basics", "Count nearby entities", """
-            int count = client.world.getEntities().stream()
-                .filter(e -> e.squaredDistanceTo(client.player) < 16 * 16)
-                .toList().size();
-            ScriptContext.say(count + " entities within 16 blocks");
+            say(world().entitiesNear(16) + " entities within 16 blocks");
+            """);
+        example("01 basics", "Status line", """
+            say("HP " + player().health() + "/" + player().maxHealth()
+                + "  XP " + player().xpLevel()
+                + "  hand " + player().mainHand());
             """);
 
         example("02 mod dev tutorial", "Ch1 - how a script runs", """
-            // Скрипт - это тело метода run(MinecraftClient client).
-            // Он компилируется ECJ прямо в игре и грузится в отдельный
-            // ClassLoader. Всё, что ниже, выполняется в игровом потоке.
-            ScriptContext.say("Chapter 1: this method body is compiled at runtime.");
+            // Скрипт - это тело метода run(). CodeForge компилирует его
+            // ECJ прямо в игре, грузит отдельным ClassLoader и выполняет
+            // в игровом потоке.
+            say("Chapter 1: this method body is compiled at runtime.");
             """);
         example("02 mod dev tutorial", "Ch2 - talking to the player", """
-            // client.player - сущность игрока, client.world - мир.
-            ScriptContext.say("Health: " + client.player.getHealth() + "/" + client.player.getMaxHealth());
-            ScriptContext.say("XP level: " + client.player.experienceLevel, true);
+            say("Health: " + player().health() + "/" + player().maxHealth());
+            actionBar("XP level: " + player().xpLevel());
             """);
         example("02 mod dev tutorial", "Ch3 - items and inventory", """
-            var inv = client.player.getInventory();
-            ScriptContext.say("Slot 0: " + inv.getStack(0).getItem().toString());
-            int empty = 0;
-            for (int i = 0; i < inv.size(); i++) {
-                if (inv.getStack(i).isEmpty()) {
-                    empty++;
-                }
-            }
-            ScriptContext.say("Empty slots: " + empty);
+            say("In hand: " + player().mainHand() + " x" + player().mainHandCount());
+            say("Empty slots: " + player().emptySlots());
             """);
         example("02 mod dev tutorial", "Ch4 - blocks around you", """
-            var pos = client.player.getBlockPos();
-            var below = client.world.getBlockState(pos.down()).getBlock();
-            ScriptContext.say("Standing on: " + below);
+            say("Standing on: " + world().blockBelow());
+            say("Air above head: " + world().isAir(0, 2, 0));
+            say("Day time: " + world().isDay() + " (tick " + world().timeOfDay() + ")");
             """);
-        example("02 mod dev tutorial", "Ch5 - what classes can I import?", """
-            // Список установленных модов: вкладка Mods или команда /cf mods.
-            // Любой класс из этих модов доступен для импорта в скрипте.
-            ScriptContext.say("Installed mods: " + com.sohonet.codeforge.mods.ModListHelper.getInstalledMods().size());
+        example("02 mod dev tutorial", "Ch5 - what can I use?", """
+            // Всё, что доступно скрипту, - методы классов Client, Player, World
+            // (пакет com.sohonet.codeforge.api). Они импортированы автоматически.
+            say("MC " + minecraftVersion() + ", soho501 = " + soho());
+            say("Loaded entities: " + world().loadedEntities());
             """);
         example("02 mod dev tutorial", "Ch6 - texture editor", """
             // Вкладка Textures рисует PNG до 32x32 и кладёт его в
-            // config/codeforge/textures/. Дальше - ресурспак, см. README.
-            ScriptContext.say("Open the Textures tab to draw a sprite.");
+            // config/codeforge/textures/. Дальше - ресурспак.
+            say("Open the Textures tab to draw a sprite.");
             """);
         example("03 snippets", "Teleport up", """
-            var p = client.player;
-            p.requestTeleport(p.getX(), p.getY() + 20, p.getZ());
-            ScriptContext.say("Up we go");
+            teleport(0, 20, 0);
+            say("Up we go");
             """);
-        example("03 snippets", "Look at what I am aiming at", """
-            var hit = client.crosshairTarget;
-            ScriptContext.say("Target: " + (hit == null ? "nothing" : hit.getType().name()));
+        example("03 snippets", "Look around report", """
+            for (String line : List.of(
+                    "pos " + player().blockPos(),
+                    "dim " + player().dimension(),
+                    "creative " + player().isCreative(),
+                    "flying " + player().isFlying())) {
+                log(line);
+            }
+            say("Wrote 4 lines to the game log");
             """);
     }
 

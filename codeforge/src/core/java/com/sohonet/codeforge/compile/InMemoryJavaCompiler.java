@@ -56,6 +56,15 @@ public final class InMemoryJavaCompiler {
      * чтобы скомпилированный класс видел классы игры/мода.
      */
     public static CompileResult compile(String className, String sourceCode, ClassLoader parentClassLoader) {
+        return compile(className, sourceCode, parentClassLoader, null);
+    }
+
+    /**
+     * @param explicitClasspath готовый classpath для ECJ (см. RuntimeClasspath);
+     *                          если null - собирается эвристикой из classloader'а
+     */
+    public static CompileResult compile(String className, String sourceCode, ClassLoader parentClassLoader,
+                                       String explicitClasspath) {
         Path tempDir;
         try {
             tempDir = Files.createTempDirectory("codeforge-ecj-");
@@ -76,7 +85,9 @@ public final class InMemoryJavaCompiler {
             Files.createDirectories(sourceFile.getParent());
             Files.writeString(sourceFile, sourceCode, StandardCharsets.UTF_8);
 
-            String classpath = buildClasspath(parentClassLoader);
+            String classpath = explicitClasspath == null || explicitClasspath.isBlank()
+                ? buildClasspath(parentClassLoader)
+                : explicitClasspath;
 
             ByteArrayOutputStream outBuf = new ByteArrayOutputStream();
             ByteArrayOutputStream errBuf = new ByteArrayOutputStream();
@@ -102,6 +113,8 @@ public final class InMemoryJavaCompiler {
             boolean ok = ecjMain.compile(args);
 
             String diagnostics = outBuf.toString(StandardCharsets.UTF_8) + errBuf.toString(StandardCharsets.UTF_8);
+            // Путь к временной папке в диагностике только пугает: заменяем на "script".
+            diagnostics = diagnostics.replace(tempDir.toAbsolutePath().toString(), "<codeforge>");
 
             if (!ok) {
                 return new CompileResult(false, diagnostics, null);

@@ -30,13 +30,6 @@ public final class ScriptRunner {
     // не входит - только сам вызов InjectedScript.run(...).
     private static final long EXECUTION_TIMEOUT_MS = 5000;
 
-    private static final ExecutorService SCRIPT_EXECUTOR =
-        Executors.newCachedThreadPool(r -> {
-            Thread t = new Thread(r, "codeforge-script");
-            t.setDaemon(true);
-            return t;
-        });
-
     private ScriptRunner() {
     }
 
@@ -89,7 +82,7 @@ public final class ScriptRunner {
 
         ClassLoader parentLoader = ScriptRunner.class.getClassLoader();
         InMemoryJavaCompiler.CompileResult compileResult =
-            InMemoryJavaCompiler.compile(fullyQualified, source, parentLoader);
+            InMemoryJavaCompiler.compile(fullyQualified, source, parentLoader, RuntimeClasspath.build());
 
         if (!compileResult.success) {
             LOGGER.warn("CodeForge compile failed:\n{}", compileResult.diagnostics);
@@ -106,25 +99,37 @@ public final class ScriptRunner {
             }
 
             MinecraftClient client = MinecraftClient.getInstance();
-            Future<Void> future = SCRIPT_EXECUTOR.submit(() -> {
-                script.run(client);
-                return null;
+            if (client == null) {
+                RunHistory.record(userMethodBody, false, "no client");
+                return new RunResult(true, false, "Minecraft client is not available.", false, List.of());
+            }
+
+            // Скрипт трогает состояние игры (игрок, мир, инвентарь), поэтому
+            // выполняем его В ИГРОВОМ ПОТОКЕ. Раньше он крутился в отдельном
+            // потоке - это классический источник случайных крашей и рассинхрона.
+            CompletableFuture<Void> done = new CompletableFuture<>();
+            client.execute(() -> {
+                try {
+                    script.run();
+                    done.complete(null);
+                } catch (Throwable t) {
+                    done.completeExceptionally(t);
+                }
             });
 
             try {
-                future.get(EXECUTION_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                done.get(EXECUTION_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                 String okMessage = "OK. (Soho501 = " + SohoRegistry.getString("Soho501") + ")";
                 RunHistory.record(userMethodBody, true, "ok");
                 return new RunResult(true, true, okMessage, false, List.of());
             } catch (TimeoutException e) {
-                // Скрипт завис дольше таймаута - прерываем поток (best-effort:
-                // код без точек проверки Thread.interrupted() может это
-                // игнорировать, но большинство обычных циклов/IO прервётся).
-                future.cancel(true);
+                // Прервать код в игровом потоке нельзя: если это бесконечный
+                // цикл, игра зависнет. Сообщаем об этом честно.
                 RunHistory.record(userMethodBody, false, "timed out");
                 return new RunResult(true, false,
-                    "Script timed out after " + EXECUTION_TIMEOUT_MS + "ms and was interrupted " +
-                    "(likely an infinite loop or a blocking call).", false, List.of());
+                    "Script is still running after " + EXECUTION_TIMEOUT_MS + "ms. "
+                        + "It runs on the game thread, so a real infinite loop will freeze the game.",
+                    false, List.of());
             } catch (ExecutionException e) {
                 Throwable cause = e.getCause() != null ? e.getCause() : e;
                 LOGGER.warn("CodeForge runtime error while executing injected script", cause);
@@ -138,24 +143,22 @@ public final class ScriptRunner {
         }
     }
 
+    /**
+     * Собирает исходник скрипта. Импортируем ТОЛЬКО стабильный API CodeForge
+     * (com.sohonet.codeforge.api) - он скомпилирован вместе с модом и потому
+     * корректно ремапится под релизную игру. Импорт классов Minecraft здесь
+     * невозможен: в проде они называются class_310 и т.п.
+     */
     private static String buildSource(String fullyQualified, String simpleName, String userMethodBody) {
         String pkg = fullyQualified.substring(0, fullyQualified.lastIndexOf('.'));
         return "package " + pkg + ";\n\n" +
-            "import net.minecraft.client.MinecraftClient;\n" +
-            "import net.minecraft.entity.*;\n" +
-            "import net.minecraft.entity.player.*;\n" +
-            "import net.minecraft.item.*;\n" +
-            "import net.minecraft.block.*;\n" +
-            "import net.minecraft.util.*;\n" +
-            "import net.minecraft.util.math.*;\n" +
-            "import net.minecraft.text.*;\n" +
-            "import net.minecraft.world.*;\n" +
-            "import com.sohonet.sohoapi.api.SohoRegistry;\n" +
+            "import com.sohonet.codeforge.api.*;\n" +
             "import com.sohonet.codeforge.sandbox.InjectedScript;\n" +
-            "import com.sohonet.codeforge.scripts.ScriptContext;\n\n" +
+            "import java.util.*;\n" +
+            "import static com.sohonet.codeforge.api.Client.*;\n\n" +
             "public class " + simpleName + " implements InjectedScript {\n" +
             "    @Override\n" +
-            "    public void run(MinecraftClient client) throws Exception {\n" +
+            "    public void run() throws Exception {\n" +
             indent(userMethodBody) +
             "\n    }\n" +
             "}\n";

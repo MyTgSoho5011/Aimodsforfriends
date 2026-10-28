@@ -153,7 +153,7 @@ public class CodeForgeScreen extends Screen {
             .build(this.textRenderer, fieldWidth, fieldHeight, Text.literal(""));
         this.codeArea.setMaxLength(1_000_000);
         this.codeArea.setMaxLines(64);
-        this.codeArea.setText(editorText != null ? editorText : Text.translatable("codeforge.placeholder").getString());
+        this.codeArea.setText(editorText != null ? editorText : "");
         this.codeArea.setChangeListener(text -> this.editorText = text);
         this.addDrawableChild(this.codeArea);
 
@@ -181,8 +181,11 @@ public class CodeForgeScreen extends Screen {
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Export .java"), b -> exportToFile())
             .dimensions(margin + (btnW + 6) * 5, buttonY, btnW + 20, 20).build());
 
-        this.outputWidget = new MultilineTextWidget(margin, buttonY + 28, Text.literal(lastOutput), this.textRenderer);
-        this.outputWidget.setMaxWidth(fieldWidth);
+        int outputTop = buttonY + 26;
+        this.outputWidget = new MultilineTextWidget(margin + 4, outputTop + 2, Text.literal(lastOutput), this.textRenderer);
+        this.outputWidget.setMaxWidth(fieldWidth - 8);
+        // Обрезаем по высоте: длинная диагностика ECJ больше не наезжает на кнопки.
+        this.outputWidget.setMaxRows(Math.max(1, (this.height - outputTop - 10) / 10));
         this.addDrawableChild(this.outputWidget);
     }
 
@@ -690,6 +693,10 @@ public class CodeForgeScreen extends Screen {
         context.fill(0, 0, this.width, this.height, 0x88000000);
         super.render(context, mouseX, mouseY, delta);
         context.drawTextWithShadow(this.textRenderer, this.getTitle(), 20, 8, 0xFFFFFF);
+        if (this.currentTab == Tab.EDITOR && this.outputWidget != null && !this.lastOutput.isEmpty()) {
+            int top = this.outputWidget.getY() - 2;
+            context.fill(4, top, this.width - 4, this.height - 4, 0xB0000000);
+        }
         if (this.errorLine > 0) {
             context.drawTextWithShadow(this.textRenderer,
                 Text.literal("compile error near line " + this.errorLine), 20, this.height - 12, 0xFF5555);

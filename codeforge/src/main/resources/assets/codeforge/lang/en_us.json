@@ -8,5 +8,5 @@
   "codeforge.title": "CodeForge - live Java console",
   "codeforge.run": "Compile & Run",
   "codeforge.clear": "Clear output",
-  "codeforge.placeholder": "// write a run(MinecraftClient client) method body here\n// example:\nclient.player.sendMessage(net.minecraft.text.Text.literal(\"hi from injected code\"), false);"
+  "codeforge.placeholder": "// body of run():\nsay(\"hi from \" + player().name());\nplayer().health(); world().blockBelow();"
 }

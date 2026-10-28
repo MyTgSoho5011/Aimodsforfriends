@@ -5,7 +5,7 @@ Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — мно�
 
 | Модуль | Что это | Артефакт |
 |---|---|---|
-| `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.0.1.jar` (внутри `META-INF/jars` уже лежат `soho-api` и `ecj`) |
+| `codeforge` | In-game Java-консоль: пишешь код, он компилируется ECJ прямо в игре и выполняется | `codeforge/build/libs/codeforge-3.1.0.jar` (внутри `META-INF/jars` уже лежат `soho-api` и `ecj`) |
 | `soho-api` | Маленькая общая библиотека для «сохо»-модов (`SohoRegistry`) | `soho-api/build/libs/soho-api-1.0.0.jar` |
 | `codeforge-plugin-api` | API для плагинов CodeForge (обычная Java-библиотека, без Minecraft) | `codeforge-plugin-api/build/libs/codeforge-plugin-api-1.0.0.jar` |
 
@@ -16,15 +16,15 @@ Fabric-моды для Minecraft **1.21.11** (Java 21). Проект — мно�
 ```
 Releases/
 ├── README.md
-├── codeforge/3.0.1/codeforge-3.0.1.jar            <- ставить ЭТОТ файл
+├── codeforge/3.1.0/codeforge-3.1.0.jar            <- ставить ЭТОТ файл
 ├── soho-api/1.0.0/soho-api-1.0.0.jar              (внутри codeforge уже есть)
 └── codeforge-plugin-api/1.0.0/…-1.0.0.jar         (нужен только для сборки плагинов)
 ```
 
-Дополнительно тот же набор выложен как **GitHub Release** `v3.0.1`
-(<https://github.com/MyTgSoho5011/Aimodsforfriends/releases/tag/v3.0.1>).
+Дополнительно тот же набор выложен как **GitHub Release** `v3.1.0`
+(<https://github.com/MyTgSoho5011/Aimodsforfriends/releases/tag/v3.1.0>).
 
-Установка: скопировать `codeforge-3.0.1.jar` в `.minecraft/mods`. Нужны Fabric Loader 0.18.4+
+Установка: скопировать `codeforge-3.1.0.jar` в `.minecraft/mods`. Нужны Fabric Loader 0.18.4+
 и Fabric API для 1.21.11; `soho-api` и компилятор ECJ уже вложены внутрь jar-ника.
 
 **Пересобрать и переопубликовать** (без локального JDK):
@@ -103,12 +103,39 @@ Actions → `Build mods` → *Run workflow* → `publish = true`. Либо сд�
 `renderBackground` бросает исключение. Убрали ручной `renderBackground` во всех экранах
 мода, вместо него — обычная полупрозрачная заливка (`DrawContext.fill`).
 
+## Скриптовый API (3.1.0)
+
+Скрипты больше **не** импортируют классы Minecraft напрямую — в релизной игре они называются
+по intermediary (`class_310` вместо `MinecraftClient`), и такой скрипт не компилировался
+(`The import net.minecraft.client.MinecraftClient cannot be resolved`). Вместо этого есть
+стабильный API, который компилируется вместе с модом и потому ремапится правильно:
+
+```java
+say("hi from " + player().name());                 // чат
+actionBar("HP " + player().health());              // над хотбаром
+say(world().blockBelow() + " / " + world().entitiesNear(16));
+teleport(0, 20, 0);
+log("в лог игры");
+```
+
+Доступно: `Client` (`say`, `actionBar`, `log`, `inGame`, `player()`, `world()`, `teleport`,
+`minecraftVersion`, `soho`, `execute`), `Player` (`name`, `x/y/z`, `blockPos`, `health`,
+`maxHealth`, `xpLevel`, `dimension`, `isFlying`, `isCreative`, `mainHand`, `mainHandCount`,
+`emptySlots`), `World` (`entitiesNear`, `blockId`, `blockBelow`, `isAir`, `timeOfDay`, `isDay`,
+`dimension`, `loadedEntities`). Всё это импортируется в скрипт автоматически
+(`import static com.sohonet.codeforge.api.Client.*;`).
+
+Скрипт выполняется **в игровом потоке** (через `MinecraftClient.execute`), а classpath для ECJ
+строится от jar-ника мода, а не от `java.class.path` — иначе в проде компилятор не видел даже
+собственные классы мода.
+
 ## Ограничения
 
-* **Компиляция скриптов в рантайме рассчитана на dev-окружение** (`runClient`/IDE), где
-  Minecraft использует yarn-имена: в релизной игре классы называются по intermediary,
-  и скрипты с `MinecraftClient.player` там не скомпилируются. Это ограничение подхода
-  «скомпилировать на лету внутри мода», а не конкретной реализации.
+* Скрипты работают через API мода (`Client`/`Player`/`World`). Прямой доступ к
+  произвольным классам Minecraft возможен только в dev-окружении: в релизной игре у них
+  intermediary-имена. Если нужен новый метод — его добавляют в `com.sohonet.codeforge.api`.
+* Скрипт исполняется в игровом потоке: бесконечный цикл подвесит игру (таймаут только
+  сообщает об этом, прервать чужой код в игровом потоке нельзя).
 * Редактор — многострочный `EditBoxWidget`: переносы строк и ввод работают, подсветки
   синтаксиса нет (только отметка «compile error near line N»).
 * Тесты/`runClient` в CI не запускаются — только сборка.
