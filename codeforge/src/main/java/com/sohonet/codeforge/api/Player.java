@@ -18,7 +18,7 @@ public final class Player {
     }
 
     public String name() {
-        return client.player.getGameProfile().getName();
+        return client.player.getGameProfile().name();
     }
 
     public double x() {
